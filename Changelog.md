@@ -8,6 +8,7 @@ Compiler Features:
  * Commandline Interface: Accept nested brackets in step sequences passed to ``--yul-optimizations``.
  * Commandline Interface: Add ``--debug-info`` option for selecting how much extra debug information should be included in the produced EVM assembly and Yul code.
  * SMTChecker: Output values for ``block.*``, ``msg.*`` and ``tx.*`` variables that are present in the called functions.
+ * SMTChecker: New trusted mode that assumes that any compile-time available code is the actual used code even in external calls. This can be used via the CLI option ``--model-checker-ext-calls=trusted`` or the JSON field ``settings.modelChecker.extCalls: "trusted"``.
  * Standard JSON: Accept nested brackets in step sequences passed to ``settings.optimizer.details.yulDetails.optimizerSteps``.
  * Standard JSON: Add ``settings.debug.debugInfo`` option for selecting how much extra debug information should be included in the produced EVM assembly and Yul code.
 
