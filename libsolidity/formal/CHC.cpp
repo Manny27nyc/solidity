@@ -1616,27 +1616,22 @@ void CHC::checkVerificationTargets()
 	// Also, all possible contexts in which an external function can be called has been recorded (m_queryPlaceholders).
 	// Here we combine every context in which an external function can be called with all possible verification conditions
 	// in its call graph. Each such combination forms a unique verification target.
-	vector<CHCVerificationTarget> verificationTargets;
+	map<unsigned, vector<CHCQueryPlaceholder>> targetEntryPoints;
 	for (auto const& [function, placeholders]: m_queryPlaceholders)
 	{
 		auto functionTargets = transactionVerificationTargetsIds(function);
 		for (auto const& placeholder: placeholders)
 			for (unsigned id: functionTargets)
-			{
-				auto const& target = m_verificationTargets.at(id);
-				verificationTargets.push_back(CHCVerificationTarget{
-					{target.type, placeholder.fromPredicate, placeholder.constraints && placeholder.errorExpression == target.errorId},
-					target.errorId,
-					target.errorNode
-				});
-			}
+				targetEntryPoints[id].push_back(placeholder);
 	}
 
 	set<unsigned> checkedErrorIds;
-	for (auto const& target: verificationTargets)
+	for (auto const& [targetId, placeholders]: targetEntryPoints)
 	{
 		string errorType;
 		ErrorId errorReporterId;
+
+		auto const& target = m_verificationTargets.at(targetId);
 
 		if (target.type == VerificationTargetType::PopEmptyArray)
 		{
@@ -1685,7 +1680,7 @@ void CHC::checkVerificationTargets()
 		else
 			solAssert(false, "");
 
-		checkAndReportTarget(target, errorReporterId, errorType + " happens here.", errorType + " might happen here.");
+		checkAndReportTarget(target, placeholders, errorReporterId, errorType + " happens here.", errorType + " might happen here.");
 		checkedErrorIds.insert(target.errorId);
 	}
 
@@ -1737,6 +1732,7 @@ void CHC::checkVerificationTargets()
 
 void CHC::checkAndReportTarget(
 	CHCVerificationTarget const& _target,
+	vector<CHCQueryPlaceholder> const& _placeholders,
 	ErrorId _errorReporterId,
 	string _satMsg,
 	string _unknownMsg
@@ -1746,7 +1742,12 @@ void CHC::checkAndReportTarget(
 		return;
 
 	createErrorBlock();
-	connectBlocks(_target.value, error(), _target.constraints);
+	for (auto const& placeholder: _placeholders)
+		connectBlocks(
+			placeholder.fromPredicate,
+			error(),
+			placeholder.constraints && placeholder.errorExpression == _target.errorId
+		);
 	auto const& location = _target.errorNode->location();
 	auto const& [result, model] = query(error(), location);
 	if (result == CheckResult::UNSATISFIABLE)
